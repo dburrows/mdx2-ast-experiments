@@ -1,7 +1,107 @@
-import type { NextPage } from 'next'
-import Head from 'next/head'
-import Image from 'next/image'
-import styles from '../styles/Home.module.css'
+import type { NextPage } from "next";
+import Head from "next/head";
+// import Image from "next/image";
+import styles from "../styles/Home.module.css";
+import { fromMarkdown } from "mdast-util-from-markdown";
+import { toMarkdown } from "mdast-util-to-markdown";
+import { mdxjs } from "micromark-extension-mdxjs";
+import { mdxFromMarkdown, mdxToMarkdown } from "mdast-util-mdx";
+import { traverse } from "../utils/traverse";
+
+const mdx2sample = `
+import Box from "place"
+
+Here’s an expression:
+
+{
+  1 + 1 /* } */
+}
+
+Which you can also put inline: {1+1}.
+
+<Box>
+  <SmallerBox>
+    - Lists, which can be indented.
+  </SmallerBox>
+</Box>
+`;
+
+const mdx2smallsample = `
+import Box from "place"
+
+# Foo
+
+<Box/>
+`;
+
+const mdxast = {
+  type: "root",
+  children: [
+    {
+      type: "mdxjsEsm",
+      value: 'import Box from "place"',
+      data: {
+        estree: {
+          type: "Program",
+          body: [
+            {
+              type: "ImportDeclaration",
+              specifiers: [
+                {
+                  type: "ImportDefaultSpecifier",
+                  local: { type: "Identifier", name: "Box" },
+                },
+              ],
+              source: {
+                type: "Literal",
+                value: "place",
+                raw: '"place"',
+              },
+            },
+          ],
+          sourceType: "module",
+          comments: [],
+        },
+      },
+    },
+    {
+      type: "heading",
+      depth: 1,
+      children: [{ type: "text", value: "Foo" }],
+    },
+    {
+      type: "mdxJsxFlowElement",
+      name: "Box",
+      attributes: [],
+      children: [],
+    },
+  ],
+};
+
+const tree = fromMarkdown(mdx2sample, {
+  extensions: [mdxjs()],
+  mdastExtensions: [mdxFromMarkdown()],
+});
+
+const tree2 = fromMarkdown(mdx2smallsample, {
+  extensions: [mdxjs()],
+  mdastExtensions: [mdxFromMarkdown()],
+});
+
+// strip out positional text info
+traverse(tree2, function (o, k, v) {
+  console.log(k + " : " + v);
+  if (
+    ["position", "column", "offset", "start", "end", "line", "range"].includes(
+      k
+    )
+  ) {
+    delete o[k];
+  }
+});
+
+console.log(JSON.stringify(tree2, null, 2));
+const out = toMarkdown(tree2, { extensions: [mdxToMarkdown()] });
 
 const Home: NextPage = () => {
   return (
@@ -12,65 +112,14 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js</a> in CodeSandbox!
-        </h1>
-
-        <p className={styles.description}>
-          Get started by editing{' '}
-          <code className={styles.code}>pages/index.tsx</code>. 
-        </p>
-        
-        <p>
-          Tip: use the inspector (next to the address bar) to open components!
-        </p>
-
-        <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h2>Documentation &rarr;</h2>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h2>Learn &rarr;</h2>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/canary/examples"
-            className={styles.card}
-          >
-            <h2>Examples &rarr;</h2>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-          >
-            <h2>Deploy &rarr;</h2>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
-        </div>
-      </main>
-
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <span className={styles.logo}>
-            <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
-          </span>
-        </a>
-      </footer>
+      <code>
+        <pre>{JSON.stringify(tree2, null, 2)}</pre>
+      </code>
+      <code>
+        <pre>{out}</pre>
+      </code>
     </div>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;
